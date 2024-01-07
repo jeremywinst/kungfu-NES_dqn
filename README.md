@@ -2,6 +2,17 @@
 ## Introduction
 Welcome to my Reinforcement Learning project for playing Atari games! This repository contains code and resources for training agents to play Kungfu-NES games using reinforcement learning techniques. This project is based on the OpenAI Gym Retro with a focus on the Implementation of the Deep Q-Network (DQN) algorithm. It also supports a variety of Atari that are available in the Gym Retro platform.
 
+### Executing Program
+For training the agent:
+```
+python kungfu_dqn.py --train true --name exp1 --episode 2000 --lr 0.00025 --decay 200 --end 0.1 --save_int 100
+```
+
+For deploying the agent:
+```
+python kungfu_dqn.py --train false --load_ep 2000 --name exp1 --episode 2000 --lr 0.00025 --decay 200 --end 0.1
+```
+
 <p align="center">
   <img src="/figures/before_training.gif" style="width:350px;"/>
   <img src="/figures/after_training.gif" style="width:350px;"/>
