@@ -1,4 +1,3 @@
-
 import time
 import gym
 import retro
@@ -29,13 +28,14 @@ def str2bool(v):
 
 parser = argparse.ArgumentParser(description='Training')
 parser.add_argument('--train', type=str2bool, default=True, help='Set to "True" for training, set to "False" for deploy the model')
-parser.add_argument('--load_epoch', type=str, default='1000', help='Load which trained model')
-parser.add_argument('--name', type=str, default='1000', help='Code name for the experiment')
-parser.add_argument('--lr', type=float, default=0.0001, metavar='N', help='learning rate (default: 0.0001)')
+parser.add_argument('--load_ep', type=str, default='1000', help='Load which trained model')
+parser.add_argument('--name', type=str, default='exp1', help='Code name for the experiment')
+parser.add_argument('--lr', type=float, default=0.00025, metavar='N', help='learning rate (default: 0.0001)')
 parser.add_argument('--decay', type=int, default=100, metavar='N', help='Rate by which epsilon to be decayed (default: 100)')
 parser.add_argument('--r_left', type=int, default=10, metavar='N', help='Reward for going left (default: 10)')
-parser.add_argument('--episode', type=int, default=1000, metavar='N', help='Number of episode for training (default: 1000)')
+parser.add_argument('--episode', type=int, default=2000, metavar='N', help='Number of episode for training (default: 1000)')
 parser.add_argument('--end', type=float, default=0.1, metavar='N', help='Lowest value of eps (default: 0.1)')
+parser.add_argument('--save_int', type=int, default=100, metavar='N', help='Save model and result every how many episode? (default: 100)')
 opt = parser.parse_args()
 
 # if gpu is to be used
@@ -103,11 +103,11 @@ EPS_START = 0.99       # starting value of epsilon
 EPS_END = opt.end      # Ending value of epsilon
 EPS_DECAY = opt.decay  # Rate by which epsilon to be decayed (100)
 TRAIN = opt.train      # option for training or testing
-LOAD_EPOCH = opt.load_epoch
+LOAD_EP = opt.load_ep
 MOMENTUM = 0.90        # momentum of the RMS optimizer
 FINAL_EXPLORATION = 100
 
-dir = './result1/{}_{}_ep{}_lr{}_decay{}_end{}'.format(GAME_NAME, TRIAL_NUMBER, opt.episode, LR, EPS_DECAY, EPS_END)
+dir = './result/{}_{}_ep{}_lr{}_decay{}_end{}'.format(GAME_NAME, TRIAL_NUMBER, opt.episode, LR, EPS_DECAY, EPS_END)
 
 MODEL_DIR = [dir+'/policy_net', dir+'/target_net'] # directory to save and load policy model and target model respectively
 
@@ -124,7 +124,7 @@ if not os.path.exists(dir) :
     os.makedirs(dir)
 
 agent = DQNAgent(INPUT_SHAPE, ACTION_SIZE, SEED, device, BUFFER_SIZE, BATCH_SIZE, GAMMA, LR, TAU, UPDATE_EVERY,
-                 REPLAY_AFTER, DQNCnn, TRAIN, LOAD_EPOCH, MODEL_DIR, MOMENTUM)
+                 REPLAY_AFTER, DQNCnn, TRAIN, LOAD_EP, MODEL_DIR, MOMENTUM)
 
 start_epoch = 0
 scores = []
@@ -144,7 +144,7 @@ plt.title("Line graph")
 plt.plot(e, color="red")
 plt.savefig( os.path.join(dir,'eps.jpg'))
 
-plt.show()
+# plt.show()
 
 def stack_frames(frames, state, is_new = False):
     frame = preprocess_frame(state, (107, 176, 0, 239), 84)
@@ -162,8 +162,9 @@ def train(n_episodes):
         n_episodes (int): maximum number of training episodes
     """
     env.viewer = None
-    # env.render()
+
     for i_episode in range(start_epoch + 1, n_episodes + 1):
+        env.render()
         state = stack_frames(None, env.reset(), True)
         score = 0.0
 
@@ -177,7 +178,7 @@ def train(n_episodes):
         timestamp = 0
 
         while timestamp < 10000:
-            # env.render()
+            env.render()
             action = agent.act(state, eps)
             next_state, reward, done, info = env.step(possible_actions[action])
             score += reward
@@ -208,14 +209,13 @@ def train(n_episodes):
         print('Episode {}/{}\t\tScore: {:.2f}\tEpsilon: {:.2f}'.format(i_episode, n_episodes, score, eps))
 
         # save model and score table every 100 episode
-        if i_episode % 50 == 0:
+        if i_episode % opt.save_int == 0 or i_episode == opt.episode:
             # save both model
             policy_path = MODEL_DIR[0]+'_{}.pth'.format(i_episode)
             target_path = MODEL_DIR[1]+'_{}.pth'.format(i_episode)
             torch.save(agent.policy_net.state_dict(), policy_path)
             torch.save(agent.target_net.state_dict(), target_path)
 
-        if i_episode % 10 == 0:
             df = pd.DataFrame(scores)
             fields = ['score']
             with open(dir + '/{}_{}_ep{}_lr{}_decay{}_end{}.csv'.format(GAME_NAME, TRIAL_NUMBER, opt.episode, LR, EPS_DECAY, EPS_END), 'w', newline='') as f:
@@ -253,13 +253,13 @@ def deploy(n_episodes):
 start = time.time()
 
 if TRAIN:
-    copyfile(os.path.basename(__file__), os.path.join('./result2/{}_{}_ep{}_lr{}_decay{}_end{}'.format(GAME_NAME, TRIAL_NUMBER, opt.episode, LR, EPS_DECAY, EPS_END), os.path.basename(__file__)))
+    copyfile(os.path.basename(__file__), os.path.join(dir, os.path.basename(__file__)))
     print("Start training...")
     train(n_episodes=opt.episode)
 
 else:
     print('Deploying agent...')
-    deploy(n_episodes=3)
+    deploy(n_episodes=1)
 
 elapsed_time = time.time() - start
 print("")
